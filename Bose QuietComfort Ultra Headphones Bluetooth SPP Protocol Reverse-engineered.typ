@@ -11,7 +11,7 @@
 ]
 #set document(
   title: "Bose QuietComfort Ultra Headphones Bluetooth SPP Protocol Reverse‑engineered",
-  author: "Krzysztof Kwiatkowski"
+  author: "Krzysztof Kwiatkowski",
 )
 #linebreak()
 #align(center)[
@@ -26,10 +26,10 @@
 
 #align(center + horizon)[
   #text(size: 17pt, [
-
+    
     #datetime.today().display()
-
-    Version 1
+    
+    Version 2
   ])
 ]
 
@@ -205,7 +205,38 @@ The same as in the #link("<get_current_volume_response>")[get current volume res
 == Modes
 Each command starts with *1f*.
 
-=== Get infromations about mode
+=== Get current mode index <get_current_mode_index>
+#section(4)[Request]
+#table(
+  columns: 5,
+  align: center,
+  [], ..least-significant-bit-index(4),
+  [*hex:*], command[1f], command[03], intention[01], payload[00],
+)
+
+#section(4)[Response]
+#table(
+  columns: 6,
+  align: center,
+  [], ..least-significant-bit-index(5),
+  [*hex:*], command[1f], command[03], intention[03], payload[01], [00 - 09],
+  [*desc:*], [], [], [], [], [Mode index],
+) <get_current_mode_index_response>
+
+=== Set current mode <set_current_mode>
+#section(4)[Request]
+#table(
+  columns: 7,
+  align: center,
+  [], ..least-significant-bit-index(6),
+  [*hex:*], command[1f], command[03], intention[05], payload[02], [00 - 09], [01],
+  [*desc:*], [], [], [], [], [Mode index], [???],
+)
+
+#section(4)[Response]
+The same as in the #link("<get_current_mode_index_response>")[get current mode response], but with the `06` intent.
+
+=== Get informations about mode <get_informations_about_mode>
 #section(4)[Request]
 #table(
   columns: 6,
@@ -220,9 +251,9 @@ Each command starts with *1f*.
   // Block with stroke can be used instead but without dashed line on page break.
   [
     #table(
-      columns: 11,
+      columns: 8,
       align: center,
-      [], ..least-significant-bit-index(51, end: 41),
+      [], ..least-significant-bit-index(51, end: 44),
       [*hex:*],
       command[1f],
       command[06],
@@ -230,10 +261,7 @@ Each command starts with *1f*.
       payload[2f],
       [00 - 09],
       [00],
-      [01],
-      [00 or 01],
-      [00],
-      [00 or 01],
+      [01 - 22 or XX],
       [*desc:*],
       [],
       [],
@@ -241,7 +269,16 @@ Each command starts with *1f*.
       [],
       [mode index],
       [],
-      [??],
+      [Mode name spoken by headphones when changing the current mode via the button. 01 - Quiet, 02 - Aware, 03 - Transparent, 04 - Transparency, 05 - Masking, 06 - Comfort, 07 - Commute, 08 - Outdoor, 09 - Workout, 0a - Home, 0b - Work, 0c - Music, 0d - Focus, 0e - Relax, 0f - Flight, 10 - Airport, 11 - Driving, 12 - Training, 13 - Gym, 14 - Run, 15 - Walk, 16 - Hike, 17 - Talk, 18 - Call, 19 - Whisper, 1a - Hearing, 1b - Learn, 1c - Podcast, 1d - Audiobook, 1e - Conn (?), 1f - Sleep, 20 - Meditate, 21 - Yoga, 22 - Immersion, Others - No sound],
+    )
+    #table(
+      columns: 4,
+      align: center,
+      [], ..least-significant-bit-index(44, end: 41),
+      [*hex:*], [00 or 01],
+      [00],
+      [00 or 01],
+      [*desc:*],
       [if the mode is created by the user],
       [??],
       [if the mode is favourite],
@@ -263,12 +300,46 @@ Each command starts with *1f*.
       [???],
       [ANC level 00 is max level, 0a disabled],
       [Is active sense enabled?],
-      [Immersive voice mode (0 - 0ff, 1 - still, 2 - motion)],
-      [The same as byte no. 43],
+      [Immersive voice mode (0 - off, 1 - still, 2 - motion)],
+      [The same as byte no. 44],
       [Is wind reduction enabled? If True, then ANC level is set to max (00)],
     )
   ],
 ) <mode_info>
+
+#figure([
+  *Not existing / deleted mode looks like this:*
+  #table(
+    columns: 18,
+    align: center,
+    [], ..least-significant-bit-index(51, end: 41), [41 - 7], ..least-significant-bit-index(6),
+    [*hex:*],
+    command[1f],
+    command[06],
+    intention[03],
+    payload[2f],
+    [00 - 09],
+    [00],
+    [00],
+    [01],
+    [00],
+    [00],
+    [...],
+    [0d], [0a], [00], [00], [01], [00],
+    [*desc:*],
+    [],
+    [],
+    [],
+    [],
+    [mode index],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [Ascii encoded: "None"],
+  )
+])
 
 === Get list of modes
 #section(4)[Request]
@@ -335,27 +406,8 @@ Each command starts with *1f*.
   [*hex:*], command[1f], command[01], intention[06], payload[00],
 )
 
-=== Set mode
-#section(4)[Request]
-#table(
-  columns: 7,
-  align: center,
-  [], ..least-significant-bit-index(6),
-  [*hex:*], command[1f], command[03], intention[05], payload[02], [00 - 09], [01],
-  [*desc:*], [], [], [], [], [Mode index], [???],
-)
-
-#section(4)[Response]
-#table(
-  columns: 6,
-  align: center,
-  [], ..least-significant-bit-index(5),
-  [*hex:*], command[1f], command[03], intention[06], payload[01], [00 - 09],
-  [*desc:*], [], [], [], [], [Set mode index],
-)
-
-=== Create mode
-_Updating mode_ is acomplished by creating a new one withg the same mode index.
+=== Create mode <create_mode>
+_Updating mode_ is acomplished by creating a new one with the same mode index.
 
 #section(4)[Request]
 #split-box(
@@ -364,14 +416,21 @@ _Updating mode_ is acomplished by creating a new one withg the same mode index.
     #table(
       columns: 8,
       align: center,
-      [], ..least-significant-bit-index(36, end: 29),
-      [*hex:*], command[1f], command[06], intention[02], payload[27], [03 - 09], [00], [0e],
-      [*desc:*], [], [], [], [], [mode index], [], [],
+      [], ..least-significant-bit-index(43, end: 36),
+      [*hex:*], command[1f], command[06], intention[02], payload[27], [03 - 09], [00], [01 - 22 or XX],
+      [*desc:*],
+      [],
+      [],
+      [],
+      [],
+      [mode index],
+      [],
+      [Mode name spoken by headphones when changing the current mode via the button. 01 - Quiet, 02 - Aware, 03 - Transparent, 04 - Transparency, 05 - Masking, 06 - Comfort, 07 - Commute, 08 - Outdoor, 09 - Workout, 0a - Home, 0b - Work, 0c - Music, 0d - Focus, 0e - Relax, 0f - Flight, 10 - Airport, 11 - Driving, 12 - Training, 13 - Gym, 14 - Run, 15 - Walk, 16 - Hike, 17 - Talk, 18 - Call, 19 - Whisper, 1a - Hearing, 1b - Learn, 1c - Podcast, 1d - Audiobook, 1e - Conn (?), 1f - Sleep, 20 - Meditate, 21 - Yoga, 22 - Immersion, Others - No sound],
     )
     #table(
       columns: 2,
       align: center,
-      [], [29 - 5],
+      [], [36 - 5],
       [*desc:*],
       [Ascii encoded mode name. For example: 52 65 6c 61 6b 73 (00)... for "Relaks". Non-english characters are encoded incorrectly.
         TODO: Decode non-english chars.],
@@ -384,14 +443,14 @@ _Updating mode_ is acomplished by creating a new one withg the same mode index.
       [*desc:*],
       [ANC level 00 is max level, 0a disabled],
       [??],
-      [Immersive voice mode (0 - 0ff, 1 - still, 2 - motion)],
+      [Immersive voice mode (0 - off, 1 - still, 2 - motion)],
       [Enable wind reduction? If True, then ANC level should be set to max (00)],
     )
   ],
 )
 
 #section(4)[Response]
-The same as in #link(<mode_info>)[the mode list response].
+The same as in #link(<mode_info>)[the informations about mode].
 
 === Get favourites
 #section(4)[Request]
@@ -510,7 +569,7 @@ The same as in the #link("<get_remember_last_mode_response>")[get remember last 
   align: center,
   [], ..least-significant-bit-index(5),
   [*hex:*], command[05], command[0f], intention[03], payload[01], [00 or 01 or 02],
-  [*desc:*], [], [], [], [], [Set immersive voice mode (0 - 0ff, 1 - still, 2 - motion)],
+  [*desc:*], [], [], [], [], [Set immersive voice mode (0 - off, 1 - still, 2 - motion)],
 ) <get_current_immersion_mode_response>
 
 === Set immersion mode
@@ -520,7 +579,7 @@ The same as in the #link("<get_remember_last_mode_response>")[get remember last 
   align: center,
   [], ..least-significant-bit-index(5),
   [*hex:*], command[05], command[0f], intention[02], payload[01], [00 or 01 or 02],
-  [*desc:*], [], [], [], [], [Immersive voice mode to set (0 - 0ff, 1 - still, 2 - motion)],
+  [*desc:*], [], [], [], [], [Immersive voice mode to set (0 - off, 1 - still, 2 - motion)],
 )
 
 #section(4)[Response]
@@ -535,15 +594,17 @@ The same as in the #link("<get_current_immersion_mode_response>")[get current im
   [*hex:*], command[05], command[11], intention[01], payload[00],
 )
 
-#section(4)[Response]
-#table(
-  columns: 6,
-  align: center,
-  // [], ..least-significant-bit-index(4),
-  // 05 11 03 62 01 06 00 00 00 00 00 00 00 00 FE 08 AE FC 7F FC 11 5C 00 00 00 00 00 00 00 00 00 00 00 00 7F FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 7F FF FF FF FD E4 00 00 03 74 00 00 CB EA 00 00 74 DA 00 00 00 00 00 00 00 00 00 00 00 00 00 00 7F FF F7 9D 00 00 00 00 00 00 00 00 00 00 00 00 7F FF F7 9D
-  [*hex:*], command[05], command[11], intention[03], payload[62], [...],
-  [*desc:*], [], [], [], [], [Calibrated position in XYZ. TODO: Decode orientation representation.],
-)
+#section(4)[Response] <get_current_immersion_mode_calibration_response>
+#figure([
+  #table(
+    columns: 6,
+    align: center,
+    [], ..least-significant-bit-index(102, end: 98), [98 - 1],
+    // 05 11 03 62 01 06 00 00 00 00 00 00 00 00 FE 08 AE FC 7F FC 11 5C 00 00 00 00 00 00 00 00 00 00 00 00 7F FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 7F FF FF FF FD E4 00 00 03 74 00 00 CB EA 00 00 74 DA 00 00 00 00 00 00 00 00 00 00 00 00 00 00 7F FF F7 9D 00 00 00 00 00 00 00 00 00 00 00 00 7F FF F7 9D
+    [*hex:*], command[05], command[11], intention[03], payload[62], [...],
+    [*desc:*], [], [], [], [], [Calibrated position in XYZ. TODO: Decode orientation representation.],
+  )
+])
 
 === Calibrate immersion mode
 #section(4)[Request]
@@ -713,7 +774,8 @@ The same as for the #link("<get_equalizer_settings_response>")[get equalizer set
 The same as for the #link("<get_current_shortcut_response>")[get current shortcut response].
 
 == Settings
-=== Device name
+=== Device name <device_name>
+The device name can be between 0 and 26 characters long.
 ==== Get device name
 #section(5)[Request]
 #table(
@@ -727,7 +789,7 @@ The same as for the #link("<get_current_shortcut_response>")[get current shortcu
 #table(
   columns: 7,
   align: center,
-  [*hex:*], command[01], command[02], intention[03], payload[XX], [00], [...],
+  [*hex:*], command[01], command[02], intention[03], payload[00 - 1A], [00], [...],
   [*desc:*], [], [], [], [], [], [Ascii encoded device name],
 ) <get_device_name_response>
 
@@ -736,7 +798,7 @@ The same as for the #link("<get_current_shortcut_response>")[get current shortcu
 #table(
   columns: 6,
   align: center,
-  [*hex:*], command[01], command[02], intention[02], payload[XX], [...],
+  [*hex:*], command[01], command[02], intention[02], payload[00 - 1A], [...],
   [*desc:*], [], [], [], [], [Ascii encoded string to be set as a device name],
 )
 
@@ -798,7 +860,7 @@ The same as the #link("<get_device_name_response>")[get device name response].
 The same as for the #link("<get_level_of_microphone_monitoring_response>")[get level of microphone monitoring during calls response].
 
 === Auto off time
-==== Get current time settings
+==== Get current auto off time
 #section(5)[Request]
 #table(
   columns: 5,
@@ -1061,40 +1123,28 @@ The same as in #link(<get_voice_prompts_response>)[response of get voice prompts
 Teh same as for the #link("<are_multipoint_connections_enabled_response>")[are multipoint connections enabled response].
 
 === Get paired devices identificator
-#section(4)[Request]
+#section(4)[Request] <get_paired_devices_identificator_request>
 #table(
-  columns: 6,
+  columns: 5,
   align: center,
-  [], ..least-significant-bit-index(5),
+  [], ..least-significant-bit-index(4),
   [*hex:*], command[04], command[04], intention[01], payload[00],
 )
 
-#section(4)[Response]
+#section(4)[Response] <get_paired_devices_identificator_response>
 #table(
-  columns: 18,
+  columns: 9,
   align: center,
-  [], ..least-significant-bit-index(17),
-  [*hex:*],
-  command[04],
-  command[04],
-  intention[03],
-  payload[0D],
-  [03],
-  [E0],
-  [0A],
-  [F6],
-  [73],
-  [B1],
-  [A2],
-  [64],
-  [89],
-  [F1],
-  [26],
-  [8E],
-  [8E],
-  [*desc:*], [], [], [], [], [],
-  table.cell(colspan: 6)[second paired device identificator (?)],
-  table.cell(colspan: 6)[First paired device identificator (?)],
+  [*hex:*], command[04], command[04], intention[03], payload[k*6 + 1], [03], [...], [...], [...],
+  [*desc:*],
+  [],
+  [],
+  [],
+  [Every paired device identificator is 6 bytes long],
+  [],
+  [...],
+  [Second (?) paired device identificator],
+  [First (?) paired device identificator],
 )
 
 === Get paired device informations
@@ -1126,7 +1176,7 @@ Teh same as for the #link("<are_multipoint_connections_enabled_response>")[are m
   [02],
   [03],
   [...],
-
+  
   [*desc:*],
   [],
   [],
@@ -1227,10 +1277,11 @@ Teh same as for the #link("<are_multipoint_connections_enabled_response>")[are m
   [*hex:*], command[00], command[0C], intention[01], payload[00],
 )
 
-#section(4)[Response]
+#section(4)[Response] <get_headphones_product_identification_number_response>
 #table(
   columns: 6,
   align: center,
+  [], ..least-significant-bit-index(20, end: 16), [16 - 1],
   [*hex:*], command[00], command[0C], intention[03], payload[10], [...],
   [*desc:*], [], [], [], [], [GUID. NOT ascii encoded.],
 )
@@ -1409,3 +1460,19 @@ Four possible requests with four possible responses. All returned values expect 
 // #schema.render(schema.load(yaml("./return.yaml")))
 
 
+#heading(level: 2, numbering: none)[Changes]
+#heading(level: 3, numbering: none)[Version 2]
+- Fixed typo in the #link("<get_informations_about_mode>")[get informations about mode] header.
+- Fixed typo in the #link("<create_mode>")[create mode] section.
+- Fixed an incorrect link to the response fomat for #link("<create_mode>")[create mode].
+- Added discovered mode names that spoken by the headphones when changing the current mode via button for both #link("<get_informations_about_mode>")[get informations about mode] and #link("<create_mode>")[create mode].
+- Added byte indexes for the #link("<get_current_immersion_mode_calibration_response>")[get current immersion mode calibration response].
+- Added byte indexes for the #link("get_headphones_product_identification_number_response")[get headphones product identification number response].
+- Fixed too wide table in the #link("<get_paired_devices_identificator_request>")[get paired devices identificator request].
+- Added the maximum #link("<device_name>")[device name] length.
+- Changed #link("<get_paired_devices_identificator_response>")[get paired devices identificator response] to support a variable number of paired devices.
+- Added #link("<mode_info>")[mode info response] schema for not existing / deleted modes.
+- Changed header title from "Get current time settings" to "Get current auto off time".
+- Added #link("<get_current_mode_index>")[get current mode index] endpoint.
+- Changed #link("<set_current_mode>")[set current mode] position in the docs (which means that header numbers changed).
+- Fixed typo from "0ff" to "off" in the document.
